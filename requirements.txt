@@ -1,0 +1,23 @@
+# Zoom MP4 Retriever
+# Web automation and requests
+nodriver>=0.35
+curl-cffi>=0.7.1
+
+# MP4 Processing
+# Azure AI Services (for your processing script)
+azure-cognitiveservices-speech>=1.38.0
+azure-ai-textanalytics>=5.3.0
+
+# Media processing
+ffmpeg-python>=0.2.0
+opencv-python>=4.9.0.80
+
+# Document generation
+python-docx>=1.1.0
+python-pptx>=0.6.23
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.7
+colorama>=0.4.6
+tqdm>=4.66.0
