@@ -36,7 +36,7 @@ env/
 .DS_Store
 
 # Project specific
-output/
+*/output/*
 !output/.gitkeep
 *.mp4
 *.mp3
