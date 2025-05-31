@@ -59,6 +59,7 @@ This can often be complementary to published materials (for example SEC filings)
 While the CLI serves technical users well, non-technical stakeholders benefit from web interfaces. A proven pattern:
 - Web form submissions write to SQL database
 - Airflow DAGs monitor for new entries and trigger processing
+- Doc processor uses a semi-formatted DOCX template to maintain corporate branding.
 - SendGrid delivers formatted documents to specified recipients
 
 This approach maintains the tool's modularity while enabling self-service access.
