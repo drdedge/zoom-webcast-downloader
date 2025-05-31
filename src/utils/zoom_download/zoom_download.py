@@ -6,14 +6,23 @@ import click
 from curl_cffi import requests as curl_requests
 from datetime import datetime
 
-from .common import IMPERSONATE_PROFILE, USER_AGENT
-
 
 class ZoomDownloader:
-    def __init__(self, extracted_vars, output_dir='output'):
+    def __init__(self, extracted_vars, output_dir='output', config=None):
         self.vars = extracted_vars
         self.output_dir = output_dir
-    
+        self.config = config
+        
+        # Get browser settings from config or use defaults
+        if config:
+            self.impersonate_profile = config.zoom_download.browser.impersonate_profile
+            self.user_agent = config.zoom_download.browser.user_agent
+            self.chunk_size = config.zoom_download.retry.chunk_size
+        else:
+            # Fallback defaults if no config provided
+            self.impersonate_profile = "chrome116"
+            self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            self.chunk_size = 8192    
     def check_requirements(self):
         """Check if we have all required data"""
         required = ['RECORDING_INFO_URL', 'COOKIES_STR', 'CSRF_TOKEN', 'ORIGIN', 'REFERER_URL']
@@ -31,9 +40,9 @@ class ZoomDownloader:
         
         click.echo("📡 Getting recording info...")
         
-        session = curl_requests.Session(impersonate=IMPERSONATE_PROFILE)
+        session = curl_requests.Session(impersonate=self.impersonate_profile)
         session.headers.update({
-            "User-Agent": USER_AGENT,
+            "User-Agent": self.user_agent,
             "Origin": self.vars['ORIGIN'],
             "Referer": self.vars['REFERER_URL'],
         })
@@ -101,9 +110,9 @@ class ZoomDownloader:
         click.echo(f"💾 Downloading to: {output_file}")
         
         # Download
-        session = curl_requests.Session(impersonate=IMPERSONATE_PROFILE)
+        session = curl_requests.Session(impersonate=self.impersonate_profile)
         session.headers.update({
-            "User-Agent": USER_AGENT,
+            "User-Agent": self.user_agent,
             "Origin": self.vars['ORIGIN'],
             "Referer": self.vars['REFERER_URL'],
         })
@@ -124,7 +133,7 @@ class ZoomDownloader:
         downloaded = 0
         
         with open(output_file, 'wb') as f:
-            for chunk in resp.iter_content(chunk_size=8192):
+            for chunk in resp.iter_content(chunk_size=self.chunk_size):
                 if chunk:
                     f.write(chunk)
                     downloaded += len(chunk)

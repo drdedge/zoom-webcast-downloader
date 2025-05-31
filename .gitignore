@@ -63,3 +63,6 @@ zoom_output/
 # Debug files
 debug_*.json
 extracted_variables_*.json
+
+
+!config.json

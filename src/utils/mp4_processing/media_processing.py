@@ -11,7 +11,7 @@ import cv2
 import ffmpeg
 import numpy as np
 
-from .logger_setup import setup_logger
+from ..logger_setup import setup_logger
 
 logger = setup_logger(name="media_processor", level=logging.INFO)
 

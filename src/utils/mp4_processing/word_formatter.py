@@ -17,9 +17,9 @@ from docx.oxml import parse_xml
 import mistune
 from htmldocx import HtmlToDocx
 
-from .logger_setup import setup_logger
+from ..logger_setup import setup_logger
 
-logger = logging.setup_logger(name = "WordDocFormatter", level=logging.INFO)
+logger = setup_logger(name = "WordDocFormatter", level=logging.INFO)
 
 
 class WordDocFormatter:

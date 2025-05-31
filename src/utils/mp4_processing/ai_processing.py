@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Union
 import requests
 from litellm import completion
 
-from .logger_setup import setup_logger
+from ..logger_setup import setup_logger
 
 logger = setup_logger(name="config_manager", level=logging.INFO)
 

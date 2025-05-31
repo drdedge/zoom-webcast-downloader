@@ -13,14 +13,35 @@ from datetime import datetime
 import nodriver as uc
 
 # Import utilities
-from utils.common import save_variables
-from utils.zoom_auth import ZoomAuthenticator
-from utils.zoom_capture import ZoomNetworkCapture
-from utils.zoom_download import ZoomDownloader
+from utils.zoom_download.zoom_auth import ZoomAuthenticator
+from utils.zoom_download.zoom_capture import ZoomNetworkCapture
+from utils.zoom_download.zoom_download import ZoomDownloader
+from utils.config_manager import ConfigManager  # Add this import
 
 # Global browser instance
 browser = None
 tab = None
+
+
+def save_variables(variables, output_dir):
+    """Save extracted variables to files"""
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Save as JSON
+    json_file = os.path.join(output_dir, f"zoom_recording_vars_{timestamp}.json")
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump(variables, f, indent=2, ensure_ascii=False)
+    
+    # Save as Python config
+    py_file = os.path.join(output_dir, "zoom_config.py")
+    with open(py_file, 'w', encoding='utf-8') as f:
+        f.write('"""Zoom Recording Configuration"""\n\n')
+        for key, value in variables.items():
+            if isinstance(value, str):
+                f.write(f'{key} = "{value}"\n')
+    
+    return json_file, py_file
 
 
 async def wait_for_variables(capture, auth, timeout_seconds=30):
@@ -53,7 +74,7 @@ async def wait_for_variables(capture, auth, timeout_seconds=30):
     return capture.check_if_complete()
 
 
-async def capture_and_download(url, password, output_dir, output_filename, headless, timeout):
+async def capture_and_download(url, password, output_dir, output_filename, headless, timeout, config):
     """Main function to capture credentials and download recording"""
     global browser, tab
     
@@ -85,10 +106,15 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
         
         click.echo("✅ Network capture enabled")
         
+        # Get max wait from config
+        max_wait_password = config.zoom_download.max_wait_password if config else 15
+        
         # First attempt
         attempt = 1
-        while attempt <= 2:
-            click.echo(f"\n📌 Attempt {attempt}/2")
+        max_attempts = config.zoom_download.retry.max_attempts if config else 2
+        
+        while attempt <= max_attempts:
+            click.echo(f"\n📌 Attempt {attempt}/{max_attempts}")
             
             # Navigate to URL (only on first attempt)
             if attempt == 1:
@@ -98,7 +124,7 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
             
             # Enter password if needed
             if not auth.password_entered:
-                success = await auth.enter_password(password)
+                success = await auth.enter_password(password, max_wait_password)
                 if not success and attempt == 1:
                     click.echo("⚠️ Password field not found, refreshing page...")
                     await tab.reload()
@@ -117,8 +143,8 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
                 break
             
             # If first attempt failed and we don't have complete data
-            if attempt == 1 and not capture.check_if_complete():
-                click.echo("\n⚠️ Did not capture required data, refreshing page...")
+            if attempt < max_attempts and not capture.check_if_complete():
+                click.echo(f"\n⚠️ Did not capture required data, refreshing page...")
                 await tab.reload()
                 await asyncio.sleep(3)
                 
@@ -128,7 +154,7 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
                 
                 attempt += 1
             else:
-                click.echo("\n❌ Failed to capture required data after 2 attempts")
+                click.echo(f"\n❌ Failed to capture required data after {max_attempts} attempts")
                 return False
         
         # Close browser before downloading
@@ -147,8 +173,11 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
         
         # Save all captured data
         capture.extracted_vars['OUTPUT_DIR'] = output_dir
-        json_file, py_file = save_variables(capture.extracted_vars, output_dir)
-        click.echo(f"💾 Variables saved to {output_dir}/")
+        
+        # Save variables if configured to do so
+        if config and config.zoom_download.output.save_variables:
+            json_file, py_file = save_variables(capture.extracted_vars, output_dir)
+            click.echo(f"💾 Variables saved to {output_dir}/")
         
         # Display captured variables
         click.echo(f"\n{'='*60}")
@@ -163,7 +192,7 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
         click.echo(f"{'='*60}")
         
         # Download the recording
-        downloader = ZoomDownloader(capture.extracted_vars, output_dir)
+        downloader = ZoomDownloader(capture.extracted_vars, output_dir, config)
         download_file = downloader.download(output_filename)
         
         if download_file:
@@ -187,8 +216,9 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
         if capture and capture.check_if_complete():
             click.echo("\n⚠️ Error occurred but credentials were captured successfully")
             capture.extracted_vars['OUTPUT_DIR'] = output_dir
-            save_variables(capture.extracted_vars, output_dir)
-            click.echo(f"💾 Variables saved to {output_dir}/")
+            if config and config.zoom_download.output.save_variables:
+                save_variables(capture.extracted_vars, output_dir)
+                click.echo(f"💾 Variables saved to {output_dir}/")
             return True  # Partial success
         
         return False
@@ -208,28 +238,57 @@ async def capture_and_download(url, password, output_dir, output_filename, headl
 @click.command()
 @click.option('--url', '-u', required=True, help='Zoom recording URL')
 @click.option('--password', '-p', required=True, help='Recording password')
-@click.option('--output-dir', '-o', default='output', help='Output directory (default: output)')
+@click.option('--config', '-c', help='Configuration file path')
+@click.option('--output-dir', '-o', help='Output directory (overrides config)')
 @click.option('--output-filename', '-f', default=None, help='Output filename (default: auto-generated)')
-@click.option('--headless', is_flag=True, help='Run browser in headless mode')
-@click.option('--timeout', '-t', default=30, type=int, help='Timeout in seconds (default: 30)')
+@click.option('--headless/--no-headless', default=None, help='Run browser in headless mode')
+@click.option('--timeout', '-t', type=int, help='Timeout in seconds')
 @click.option('--debug', is_flag=True, help='Enable debug mode')
-def main(url, password, output_dir, output_filename, headless, timeout, debug):
+def main(url, password, config, output_dir, output_filename, headless, timeout, debug):
     """Capture and download Zoom recordings"""
     
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
+    # Load configuration
+    config_mgr = ConfigManager(config_file=config)
     
-    # Run the async function
-    success = asyncio.run(capture_and_download(url, password, output_dir, output_filename, headless, timeout))
+    # Override with command line arguments if provided
+    if output_dir is not None:
+        config_mgr.config.output_dir = output_dir
+    if headless is not None:
+        config_mgr.config.zoom_download.headless = headless
+    if timeout is not None:
+        config_mgr.config.zoom_download.timeout = timeout
+    if debug:
+        config_mgr.config.debug = debug
+    
+    # Get final values from config
+    actual_output_dir = config_mgr.config.output_dir
+    actual_headless = config_mgr.config.zoom_download.headless
+    actual_timeout = config_mgr.config.zoom_download.timeout
+    
+    # Create output directory
+    os.makedirs(actual_output_dir, exist_ok=True)
+    
+    # Run the async function, passing the entire config object
+    success = asyncio.run(
+        capture_and_download(
+            url, 
+            password, 
+            actual_output_dir, 
+            output_filename, 
+            actual_headless, 
+            actual_timeout,
+            config_mgr.config  # Pass the entire config object
+        )
+    )
     
     if success:
         click.echo(f"\n{'='*60}")
         click.echo("✅ SUCCESS!")
         click.echo(f"{'='*60}")
-        if os.path.exists(os.path.join(output_dir, "zoom_config.py")):
-            click.echo(f"📄 Variables saved to: {output_dir}/")
+        if os.path.exists(os.path.join(actual_output_dir, "zoom_config.py")):
+            click.echo(f"📄 Variables saved to: {actual_output_dir}/")
         # Check if download completed by looking for MP4 files
-        mp4_files = [f for f in os.listdir(output_dir) if f.endswith('.mp4')]
+        mp4_files = [f for f in os.listdir(actual_output_dir) if f.endswith('.mp4')]
         if mp4_files:
             click.echo(f"📁 Recording downloaded: {mp4_files[-1]}")
         click.echo(f"{'='*60}")
@@ -245,11 +304,9 @@ def main(url, password, output_dir, output_filename, headless, timeout, debug):
         click.echo(f"{'='*60}")
         
         # Save debug info if requested
-        if debug:
-            debug_file = os.path.join(output_dir, f"debug_requests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-            # Note: We can't access capture instance here, so we'll skip debug saving
-            # or you could return capture instance from capture_and_download if needed
-            click.echo(f"\nDebug mode enabled but data not accessible in this scope")
+        if debug and config_mgr.config.debug:
+            debug_file = os.path.join(actual_output_dir, f"debug_info_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            click.echo(f"\nDebug mode enabled - check {debug_file} for details")
 
 
 if __name__ == "__main__":

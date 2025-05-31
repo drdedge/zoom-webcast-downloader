@@ -25,10 +25,10 @@ import click
 
 # Import utilities
 from utils.logger_setup import setup_logger
-from utils.media_processing import MediaProcessor
-from utils.ai_processing import AIProcessor
-from utils.document_generation import DocumentGenerator
-from utils.word_formatter import WordDocFormatter
+from utils.mp4_processing.media_processing import MediaProcessor
+from utils.mp4_processing.ai_processing import AIProcessor
+from utils.mp4_processing.document_generation import DocumentGenerator
+from utils.mp4_processing.word_formatter import WordDocFormatter
 from utils.config_manager import ConfigManager
 
 

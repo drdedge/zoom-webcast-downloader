@@ -12,7 +12,7 @@ from typing import List, Optional
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
-from .logger_setup import setup_logger
+from ..logger_setup import setup_logger
 
 logger = setup_logger(name="config_manager", level=logging.INFO)
 

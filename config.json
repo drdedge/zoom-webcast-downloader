@@ -1,0 +1,41 @@
+{
+    "azure": {
+        "speech_key": "your-speech-key-here",
+        "speech_endpoint": "https://your-resource.cognitiveservices.azure.com",
+        "openai_endpoint": "https://your-openai-resource.openai.azure.com/",
+        "openai_key": "your-openai-key-here",
+        "model_name": "azure/gpt-4",
+        "api_version": "2024-02-15-preview"
+    },
+    "zoom_download": {
+        "headless": true,
+        "timeout": 30,
+        "max_wait_password": 15,
+        "browser": {
+            "impersonate_profile": "chrome116",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        },
+        "retry": {
+            "max_attempts": 2,
+            "network_timeout": 300,
+            "chunk_size": 8192
+        },
+        "output": {
+            "save_variables": true,
+            "auto_filename_from_topic": true
+        }
+    },
+    "processing": {
+        "extract_frames": false,
+        "create_ppt": false,
+        "transcribe": true,
+        "generate_summary": true,
+        "frame_threshold": 30,
+        "max_speakers": 10,
+        "timeout": 60
+    },
+    "output_dir": "output",
+    "log_to_file": true,
+    "log_dir": "logs",
+    "debug": false
+}

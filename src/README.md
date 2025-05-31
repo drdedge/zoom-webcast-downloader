@@ -41,6 +41,64 @@ zoom-recording-processor/
 
 Each top‑level script exposes a CLI built with `typer`. Run `<script> --help` for option details.
 
+```mermaid
+graph LR
+    subgraph "Stage 1: Zoom Download"
+        A[zoom_capture_download_v2.py] --> B[utils/zoom_auth.py]
+        A --> C[utils/zoom_capture.py]
+        A --> D[utils/zoom_download.py]
+        A --> E[utils/common.py]
+        B --> F[Authenticate & Enter Password]
+        C --> G[Capture Network Requests]
+        D --> H[Download MP4]
+    end
+    
+    subgraph "Stage 2: MP4 Processing"
+        I[mp4_processor.py] --> J[utils/config_manager.py]
+        I --> K[utils/media_processing.py]
+        I --> L[utils/ai_processing.py]
+        I --> M[utils/document_generation.py]
+        I --> N[utils/word_formatter.py]
+        
+        K --> K1[validate_media_file]
+        K --> K2[extract_audio]
+        K --> K3[extract_changed_frames]
+        K --> K4[get_video_duration]
+        
+        L --> L1[transcribe_audio]
+        L --> L2[process_transcript]
+        L --> L3[generate_meeting_summary]
+        
+        M --> M1[create_output_structure]
+        M --> M2[create_ppt_from_frames]
+        M --> M3[build_markdown_document]
+        
+        N --> N1[markdown_to_docx]
+    end
+    
+    subgraph "Orchestration"
+        O[zoom_mp4_pipeline.py] --> A
+        O --> I
+    end
+    
+    H --> P[MP4 File]
+    P --> I
+    
+    I --> Q[Output Files]
+    Q --> Q1[transcript.json]
+    Q --> Q2[transcript.txt]
+    Q --> Q3[summary.txt]
+    Q --> Q4[frames.pptx]
+    Q --> Q5[document.docx]
+    Q --> Q6[audio.mp3]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style I fill:#f9f,stroke:#333,stroke-width:2px
+    style O fill:#9ff,stroke:#333,stroke-width:2px
+
+```
+
+
 ---
 
 ## 4  Installation
