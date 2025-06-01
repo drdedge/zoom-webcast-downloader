@@ -86,7 +86,7 @@ class MP4Processor:
         self.logger.info(f"{'='*60}")
         self.logger.info(f"Starting MP4 processing pipeline")
         self.logger.info(f"Input: {mp4_path}")
-        self.logger.info(f"Output: {output_dir}")
+        self.logger.info(f"Output directory: {output_dir}")
         self.logger.info(f"{'='*60}")
         
         mp4_path_obj = Path(mp4_path).expanduser().resolve()
@@ -143,6 +143,7 @@ class MP4Processor:
         transcript_text = ""
         if transcribe:
             # Validate audio file for transcription
+            print(f"Validating audio file for transcription: {mp3_path}")
             audio_validation = self.media_processor.validate_media_file(
                 mp3_path,
                 max_size_mb=300,

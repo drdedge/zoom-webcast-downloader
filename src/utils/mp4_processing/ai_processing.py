@@ -48,7 +48,7 @@ class AIProcessor:
         self.api_version = api_version
         self.logger = logger
     
-    def ask_llm(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.7) -> Optional[str]:
+    def ask_llm(self, prompt: str, max_completion_tokens: int = 10000) -> Optional[str]:
         """
         Send a prompt to Azure OpenAI via litellm.
         
@@ -71,8 +71,8 @@ class AIProcessor:
             response = completion(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens
+                reasoning_effort="high",
+                max_completion_tokens = max_completion_tokens,
             )
             
             result = response.choices[0].message.content
@@ -255,7 +255,7 @@ Its imperative to have the summary in a markdown codeblock, other comments, cons
         prompt = prompt_template.format(transcript=transcript)
         
         self.logger.info("Sending transcript to LLM for summarization")
-        response = self.ask_llm(prompt, max_tokens=1500)
+        response = self.ask_llm(prompt, max_completion_tokens=2000)
         
         if response:
             summary_md = self.extract_codeblock(response, "markdown")
