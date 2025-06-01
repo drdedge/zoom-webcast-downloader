@@ -4,16 +4,16 @@ AI and Transcription Processing Utilities
 Handles speech-to-text, LLM interactions, and content generation
 """
 
-import os
 import json
 import logging
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 import requests
-from litellm import completion
 
 from ..logger_setup import setup_logger
+from .azure_client import AzureLLMClient
+from .prompts import MEETING_SUMMARY_PROMPT
 
 logger = setup_logger(name="config_manager", level=logging.INFO)
 
@@ -42,11 +42,15 @@ class AIProcessor:
         """
         self.speech_key = speech_key
         self.speech_endpoint = speech_endpoint
-        self.azure_endpoint = azure_endpoint
-        self.model_name = model_name
-        self.api_key = api_key
-        self.api_version = api_version
         self.logger = logger
+        
+        # Initialize Azure LLM client
+        self.llm_client = AzureLLMClient(
+            azure_endpoint=azure_endpoint,
+            api_key=api_key,
+            model_name=model_name,
+            api_version=api_version
+        )
     
     def ask_llm(self, prompt: str, max_completion_tokens: int = 10000) -> Optional[str]:
         """
@@ -54,36 +58,15 @@ class AIProcessor:
         
         Args:
             prompt: The prompt to send
-            max_tokens: Maximum tokens in response
-            temperature: Temperature for response generation
+            max_completion_tokens: Maximum tokens in response
             
         Returns:
             LLM response or None if error
         """
-        try:
-            self.logger.info(f"Sending prompt to {self.model_name}: {prompt[:50]}...")
-            
-            # Set environment variables for litellm
-            os.environ["AZURE_API_KEY"] = self.api_key
-            os.environ["AZURE_API_BASE"] = self.azure_endpoint
-            os.environ["AZURE_API_VERSION"] = self.api_version
-            
-            response = completion(
-                model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
-                reasoning_effort="high",
-                max_completion_tokens = max_completion_tokens,
-            )
-            
-            result = response.choices[0].message.content
-            self.logger.info("Successfully received response from LLM")
-            self.logger.debug(f"Response: {result[:100]}...")
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error calling LLM: {str(e)}")
-            return None
+        return self.llm_client.complete(
+            prompt=prompt,
+            max_completion_tokens=max_completion_tokens
+        )
     
     def extract_codeblock(self, text: str, block_type: str = "markdown") -> Optional[str]:
         """
@@ -212,47 +195,7 @@ class AIProcessor:
         Returns:
             Summary text
         """
-        prompt_template = """
-# Meeting Summary System
-You are a specialized system for generating concise meeting summaries from transcripts of private credit fund meetings. 
-These meetings involve various professional counterparties including banks, LPs, potential issuers, and professional advisers.
-
-## INPUT
-The meeting transcript is provided below. Your task is to generate a summary of the meeting, you should only include items considered in the meeting.
-
-## OUTPUT REQUIREMENTS
-Generate 3-7 bullet points that capture:
-1. Key topics discussed and associated metrics and KPIs mentioned
-2. Decisions made
-3. Action items
-
-## FORMAT SPECIFICATIONS
-- Present the summary in a markdown code block
-- Each bullet point should begin with a brief (3-7 word) bolded topic label
-- Content should be minimally wordy, focusing exclusively on actions, decisions, and key information
-- The final bullet point must always be "**Next Steps**" listing follow-ups and outstanding items
-- Total summary should be scannable in under 30 seconds
-
-## STYLE GUIDELINES
-- Be direct and precise
-- Prioritize concrete numbers, dates, and commitments
-- Omit pleasantries, small talk, and tangential discussions
-- Focus on information that would be relevant for the COO walking into a follow-up meeting
-
-Example output structure:
-```markdown
-- **Debt Refinancing Options**: Secured $50M term sheet at SOFR+350; requires board approval by June 15
-- **Portfolio Company XYZ**: Q1 EBITDA $12.4M (-5% YoY); covenant issues resolved with 50bps fee
-- **LP Capital Commitments**: $75M soft-circled from Pension Fund A; documentation in progress
-- **Next Steps**: Team to send updated financial model by Friday; schedule follow-up with Bank B next week
-```
-
-Its imperative to have the summary in a markdown codeblock, other comments, considerations should be outside of this codeblock.
-
-# Transcript to summarise
-{transcript}
-"""
-        prompt = prompt_template.format(transcript=transcript)
+        prompt = MEETING_SUMMARY_PROMPT.format(transcript=transcript)
         
         self.logger.info("Sending transcript to LLM for summarization")
         response = self.ask_llm(prompt, max_completion_tokens=2000)

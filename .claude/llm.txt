@@ -1,0 +1,143 @@
+# Zoom Webcast Downloader - LLM Context Documentation
+
+## Project Overview
+This is a production-ready Python application that automates the download and processing of Zoom recordings. It transforms video recordings into comprehensive business documents including transcripts, AI summaries, presentation decks, and Word reports.
+
+## Key Capabilities
+1. **Automated Download**: Downloads Zoom recordings even from password-protected links
+2. **Media Processing**: Extracts audio and key presentation frames from videos
+3. **AI Transcription**: Uses Azure Speech Services for speaker-diarized transcription
+4. **Smart Summarization**: Generates executive summaries via Azure OpenAI (optimized for o3-mini)
+5. **Document Generation**: Creates professional Word documents with embedded slides and transcripts
+
+## Architecture Philosophy
+- **Modular Design**: Each component (download, transcription, summarization, document generation) is a standalone class
+- **Vendor Agnostic**: Built to avoid lock-in, easily extensible to other platforms
+- **Enterprise Ready**: Includes retry logic, comprehensive logging, and configuration management
+- **CLI First**: All functionality exposed through command-line interfaces using Click
+
+## Core Components
+
+### 1. Zoom Download Pipeline (`src/zoom_capture_download.py`)
+- Uses nodriver (undetected Chrome) for browser automation
+- Captures network requests to extract MP4 URLs
+- Handles authentication, cookies, and password-protected recordings
+- Includes exponential backoff retry logic for network operations
+
+### 2. MP4 Processor (`src/mp4_processor.py`)
+- Entry point for processing downloaded or local MP4 files
+- Orchestrates the entire processing pipeline
+- Configurable via CLI flags, environment variables, or config.json
+
+### 3. Utilities (`src/utils/`)
+
+#### Configuration Management (`config_manager.py`)
+- Hierarchical configuration: CLI > Environment > JSON > Defaults
+- Supports Azure credentials and processing options
+- Dataclass-based for type safety
+
+#### Zoom Download Utilities
+- `zoom_auth.py`: Handles Zoom authentication and password entry
+- `zoom_capture.py`: Network request capture for MP4 URL extraction
+- `zoom_download.py`: Manages the actual file download with progress tracking
+
+#### MP4 Processing Utilities
+- `media_processing.py`: FFmpeg-based audio extraction, OpenCV frame detection
+- `ai_processing.py`: Azure Speech Services transcription, OpenAI summarization
+- `document_generation.py`: Creates output structure, PowerPoint from frames
+- `word_formatter.py`: Converts markdown to styled Word documents
+
+#### Support Utilities
+- `logger_setup.py`: Centralized logging with rotation and color output
+- Environment variable support via python-dotenv
+
+## Configuration Structure
+```json
+{
+    "azure": {
+        "speech_key": "Azure Speech Services key",
+        "speech_endpoint": "Speech Services endpoint",
+        "openai_endpoint": "Azure OpenAI endpoint",
+        "openai_key": "OpenAI key",
+        "model_name": "azure/gpt-4",
+        "api_version": "2024-02-15-preview"
+    },
+    "zoom_download": {
+        "headless": true,
+        "timeout": 30,
+        "browser": {
+            "impersonate_profile": "chrome116",
+            "user_agent": "Mozilla user agent string"
+        }
+    },
+    "processing": {
+        "extract_frames": false,
+        "create_ppt": false,
+        "transcribe": true,
+        "generate_summary": true
+    }
+}
+```
+
+## Output Structure
+```
+output/
+└── YYYY-MM-DD_HHMMSS/
+    ├── audio.mp3           # Extracted audio
+    ├── transcript.json     # Raw Azure Speech output
+    ├── transcript.txt      # Clean text transcript
+    ├── summary.txt         # AI-generated summary
+    ├── frames.pptx         # Presentation slides (optional)
+    └── document.docx       # Complete formatted document
+```
+
+## Key Dependencies
+- **Web Automation**: nodriver (undetected Chrome), curl-cffi
+- **Media Processing**: ffmpeg-python, opencv-python, moviepy
+- **AI Services**: azure-cognitiveservices-speech, litellm
+- **Document Generation**: python-docx, python-pptx, mistune
+- **CLI/Utils**: click, tqdm, colorama, python-dotenv
+
+## Usage Patterns
+
+### Basic Download and Process
+```bash
+python zoom_capture_download.py --url "https://zoom.us/rec/share/..." --password "pass"
+python mp4_processor.py process --mp4-path ./downloaded.mp4
+```
+
+### Full Pipeline
+```bash
+python zoom_mp4_pipeline.py download-and-process \
+  --url "https://zoom.us/rec/share/..." \
+  --password "p@ssw0rd" \
+  --process
+```
+
+## Extension Points
+1. **Platform Support**: Architecture supports adding Viavid, Lumi, Cisco Webex
+2. **OCR Enhancement**: Can add text extraction from slides
+3. **Financial Analysis**: Custom prompts for earnings calls and investor presentations
+4. **Enterprise Integration**: SQL database submission, Airflow orchestration, SendGrid delivery
+
+## Important Notes
+- Frame detection uses histogram analysis with configurable thresholds
+- Audio is converted to 48kHz mono WAV for optimal transcription
+- Azure Speech API has a 300MB limit - large files need chunking
+- Browser sessions persist cookies for subsequent downloads
+- All operations wrapped in retry decorators for resilience
+
+## Security Considerations
+- Credentials managed through environment variables or secure config
+- No hardcoded secrets in codebase
+- Browser automation uses stealth techniques to avoid detection
+- Downloaded content stored locally with configurable paths
+
+## Development Guidelines
+- Each module is self-contained with clear interfaces
+- Comprehensive logging throughout the pipeline
+- Progress bars for long-running operations
+- Type hints and docstrings for maintainability
+- Configuration validation at startup
+
+This codebase is designed for production use in financial and enterprise environments where recording processing needs to be automated, reliable, and produce professional outputs.

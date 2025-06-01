@@ -65,4 +65,4 @@ debug_*.json
 extracted_variables_*.json
 
 
-!config.json
+config.json
