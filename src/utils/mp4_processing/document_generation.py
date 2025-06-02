@@ -135,6 +135,10 @@ class DocumentGenerator:
         
         metadata_section = "  \n".join(metadata_lines)
         
+        # Format transcript with proper line breaks for markdown
+        # Convert single newlines to double newlines for proper paragraph breaks
+        formatted_transcript = transcript.replace('\n', '\n\n')
+        
         # Build complete document
         md = f"""# {title}
 
@@ -146,7 +150,7 @@ class DocumentGenerator:
 
 ## Transcript
 
-{transcript}
+{formatted_transcript}
 """
         
         self.logger.info("Markdown document built successfully")
