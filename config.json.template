@@ -5,7 +5,7 @@
         "openai_endpoint": "https://your-openai-resource.openai.azure.com/",
         "openai_key": "your-openai-key-here",
         "model_name": "azure/gpt-4",
-        "api_version": "2024-02-15-preview"
+        "api_version": "2025-01-01-preview"
     },
     "zoom_download": {
         "headless": true,

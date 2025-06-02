@@ -9,10 +9,10 @@ import os
 import logging
 from typing import Optional, Dict, Any
 from litellm import completion
-
 from ..logger_setup import setup_logger
 
 logger = setup_logger(name="azure_client", level=logging.INFO)
+
 
 
 class AzureLLMClient:
@@ -66,7 +66,7 @@ class AzureLLMClient:
             LLM response or None if error
         """
         try:
-            self.logger.info(f"Sending prompt to {self.model_name}: {prompt[:50]}...")
+            self.logger.info(f"Sending prompt length: {len(prompt)} to {self.model_name}: {prompt[:50]}...")
             
             # Ensure environment is configured
             self._configure_environment()

@@ -138,17 +138,16 @@ class DocumentGenerator:
         # Build complete document
         md = f"""# {title}
 
-        {metadata_section}
+{metadata_section}
 
-        ## Summary
+## Summary
 
-        {summary}
+{summary}
 
-        ## Transcript
+## Transcript
 
-        ```
-        {transcript}
-        ```"""
+{transcript}
+"""
         
         self.logger.info("Markdown document built successfully")
         return md

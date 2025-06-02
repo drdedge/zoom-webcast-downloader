@@ -37,6 +37,7 @@ env/
 
 # Project specific
 */output/*
+output/*
 !output/.gitkeep
 *.mp4
 *.mp3
@@ -65,4 +66,5 @@ debug_*.json
 extracted_variables_*.json
 
 
+# Configuration files
 config.json

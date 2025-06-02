@@ -5,6 +5,7 @@ import os
 import click
 from curl_cffi import requests as curl_requests
 from datetime import datetime
+from urllib.parse import urlparse
 
 
 class ZoomDownloader:
@@ -91,10 +92,22 @@ class ZoomDownloader:
         
         # Generate filename
         if not output_filename:
+            # Extract subdomain from URL
+            subdomain = ""
+            if self.vars.get('REFERER_URL'):
+                parsed_url = urlparse(self.vars['REFERER_URL'])
+                hostname_parts = parsed_url.hostname.split('.')
+                if len(hostname_parts) > 2:
+                    subdomain = hostname_parts[0]
+            
             topic = self.vars.get('FILE_INFO', {}).get('meeting_topic', 'recording')
             safe_topic = "".join(c for c in topic if c.isalnum() or c in ' -_')[:50]
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_filename = f"{safe_topic}_{timestamp}.mp4"
+            
+            if subdomain:
+                output_filename = f"{subdomain}_{safe_topic}_{timestamp}.mp4"
+            else:
+                output_filename = f"{safe_topic}_{timestamp}.mp4"
         
         output_file = os.path.join(self.output_dir, output_filename)
         os.makedirs(self.output_dir, exist_ok=True)

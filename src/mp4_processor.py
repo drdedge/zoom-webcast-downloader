@@ -198,6 +198,14 @@ class MP4Processor:
                 }
             )
             
+            # Save markdown file
+            md_path = dirs["outputs"] / (mp4_path_obj.stem + ".md")
+            with md_path.open("w", encoding="utf-8") as f:
+                f.write(markdown)
+            results["markdown"] = md_path
+            self.logger.info(f"Saved markdown document: {md_path}")
+            
+            # Save Word document
             docx_path = dirs["outputs"] / (mp4_path_obj.stem + ".docx")
             if self.word_formatter.markdown_to_docx(markdown, output_filepath=str(docx_path)):
                 results["docx"] = docx_path
