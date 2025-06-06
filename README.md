@@ -34,6 +34,11 @@ cd zoom-webcast-downloader
 # Install dependencies
 pip install -r requirements.txt
 
+```
+
+FFmpeg is required for audio and video processing. Windows users can install it with `choco install ffmpeg` (ensure Chocolatey is installed first). Linux users can run `sudo apt-get install ffmpeg`, and macOS users can `brew install ffmpeg`.
+
+```bash
 # Copy and configure settings
 cp config.json.template config.json
 # Edit config.json with your Azure credentials
